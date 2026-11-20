@@ -1,0 +1,17 @@
+## Interface: 16001
+## Title: Hold the Weather
+## Notes: Frost Mage warning: flashes HOLD THE WEATHER! when you start channelling Blizzard while your own Frost Nova may still be holding (Blizzard breaks Frost Nova on Forever). Part of the Frost Suite; works alone. Blizzard sounds and textures only.
+## Author: Kenny
+## Version: 1.0.0
+## SavedVariables: KennyHoldTheWeatherDB
+## X-License: MIT
+## IconTexture: Interface\Icons\Spell_Frost_FrostNova
+## X-Category: Combat
+## X-Website: https://github.com/masterred92/HoldTheWeather
+
+Libs\KennyShared\Compat.lua
+Libs\KennyShared\Core.lua
+Libs\KennyShared\Hub.lua
+Libs\FrostSuite\FrostSuite.lua
+Locales\enUS.lua
+HoldTheWeather.lua
