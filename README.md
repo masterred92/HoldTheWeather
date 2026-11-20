@@ -44,7 +44,7 @@ one glow at a time. Hold the Weather has the top priority, because it is the onl
 - `tests/run.sh <wow-ui-source>`: syntax, luacheck, locale, mock-client tests (with the game's secret-value rules) and checks
   against Blizzard's API docs
 - `tools/verify_unit_events.py <wow-ui-source>`: unit events exist in the docs
-- `tools/check_suite_lib.sh`: this copy of FrostSuite-1.0 matches the suite's canonical copy
+- `tools/check_suite_lib.sh <frost-suite-lib folder>`: this copy of FrostSuite-1.0 matches the suite's canonical copy
 - `tools/verify_media.sh`: every built-in sound and texture exists in the game client
 
 Spell IDs come from the game's own data tables (SpellName, SkillLineAbility, SpellMisc) for builds 1.60.1.70862 and 70888.
