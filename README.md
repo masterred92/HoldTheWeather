@@ -1,6 +1,6 @@
 # Hold the Weather
 
-A tiny Frost Mage warning for **WoW: Forever** (Interface 16001). Version 1.0.0. Part of Kenny's Frost Suite, and it works alone.
+A tiny Frost Mage warning for **WoW: Forever** (Interface 16001). Version 1.0.1. Part of Kenny's Frost Suite, and it works alone.
 
 Since the official **Nov 13, 2026 hotfix**, "Frost Nova is now correctly broken by damage from procs and damage from Blizzard."
 Channelling your own Blizzard into your own Frost Nova lets the pack go. Hold the Weather stays quiet until you do that, then
