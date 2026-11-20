@@ -96,11 +96,11 @@ W.fire("PLAYER_LOGIN")
 check(HW.modes.nova == "none" and HW.modes.blizzard == "cast", "Nova hidden, Blizzard visible")
 check(FS.rows.HoldTheWeather.statusText == "can't see your Frost Nova here", "status names the missing Nova window")
 
--- 5. Not a Mage / spells not known: the row takes no slot.
+-- 5. Not a Mage: the row takes no slot. Spells not known: one calm line (tests/test_lowlevel.lua has the details).
 reset(); W.class = "WARRIOR"; W.fire("SPELLS_CHANGED")
 check(row.state == "hidden" and not HW.known, "non-Mage: row hidden")
 W.class = nil; W.known = { [122] = true }; W.fire("SPELLS_CHANGED")
-check(row.state == "hidden", "Nova known but no Blizzard: hidden")
+check(row.state == "learn" and row.learnText.text_ == "Learn Blizzard from your trainer", "Nova known but no Blizzard: says to learn it (r5)")
 W.known = nil; W.fire("SPELLS_CHANGED")
 check(row.state ~= "hidden", "both known: shown")
 

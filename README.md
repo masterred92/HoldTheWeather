@@ -25,6 +25,12 @@ Frost Nova lasts **up to** 8 seconds, and damage can end it sooner. So with the 
 up) and never shows a countdown. Procs and other damage can also break Nova. The addon can't see those, because the game
 doesn't give addons a combat log.
 
+## Low-level Mages
+
+Until you have Frost Nova (level 10) and Blizzard (level 20), the box shows one calm line, like `Learn Frost Nova at level 10`, and a small
+**Hide until I learn** button. In combat the line steps aside. The button hides the box on that character only, and the box comes back by
+itself when you learn what it needs. Other classes never see it.
+
 ## Commands
 
 The Frost Suite has no per-addon slash commands, only `/frost <sub>`. That keeps the risk of clashing with other addons low.

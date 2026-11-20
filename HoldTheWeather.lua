@@ -28,6 +28,8 @@ local SCHEMA = 1
 
 HW.NOVA = { [122] = 1, [865] = 2, [6131] = 3, [10230] = 4 }
 HW.BLIZZARD = { [10] = 1, [6141] = 2, [8427] = 3, [10185] = 4, [10186] = 5, [10187] = 6 }
+-- Trainer levels: SpellLevels.BaseLevel, build 1.60.1.71037 (Frost Nova 122 = 10, Blizzard 10 = 20).
+HW.NEEDS = { { name = L["Frost Nova"], level = 10, spells = HW.NOVA }, { name = L["Blizzard"], level = 20, spells = HW.BLIZZARD } }
 HW.NOVA_SECONDS = 8
 HW.PREVIEW_SECONDS = 4
 HW.DEFAULTS = {}
@@ -93,19 +95,13 @@ end
 
 function HW.CanWarn() return HW.modes.blizzard ~= "none" and HW.modes.nova ~= "none" end
 
-local function knowsAny(set)
-  local SB = C_SpellBook
-  if not (SB and type(SB.IsSpellKnown) == "function") then return true end -- can't ask: assume known, debug says so
-  for id in pairs(set) do
-    local ok, v = pcall(SB.IsSpellKnown, id)
-    if ok and v == true then return true end
-  end
-  return false
-end
+-- Not a Mage: hidden. A Mage without Frost Nova or Blizzard yet: HW.need names the first one missing (the box says when
+-- to learn it). The client can't say (no C_SpellBook.IsSpellKnown): assumed known, debug says so.
 function HW.CheckKnown()
   if C.InCombat() then return HW.known end -- spellbook only re-read out of combat
-  local _, class = UnitClass("player")
-  HW.known = class == "MAGE" and knowsAny(HW.NOVA) and knowsAny(HW.BLIZZARD)
+  HW.need = FS.IsMage() and FS.Missing(HW.NEEDS) or nil
+  HW.known = FS.IsMage() and HW.need == nil
+  if HW.known then FS.Learned(KEY) end
   return HW.known
 end
 
@@ -225,7 +221,10 @@ function HW.StatusText()
 end
 
 function HW.Paint()
-  if not HW.known and not HW.preview then FS.State(KEY, "hidden"); return end
+  if not HW.known and not HW.preview then
+    if HW.need then FS.NotYet(KEY, HW.need) else FS.State(KEY, "hidden") end
+    return
+  end
   local text, color = HW.StatusText()
   FS.Status(KEY, text, color)
   if HW.warning then
@@ -254,7 +253,7 @@ function HW.DetectionLines()
     ("Blizzard channel: %s  (cast = your channel start/stop seen, none = hidden by the client)"):format(HW.modes.blizzard),
     ("secret restrictions: %s, auras secret now: %s, in combat: %s"):format(tostring(HW.restricted),
       tostring(S and call(S.ShouldAurasBeSecret)), tostring(C.InCombat())),
-    ("knows Frost Nova and Blizzard (Mage): %s%s"):format(tostring(HW.known),
+    ("knows Frost Nova and Blizzard (Mage): %s%s%s"):format(tostring(HW.known), HW.need and (", not yet: " .. HW.need.name) or "",
       (C_SpellBook and C_SpellBook.IsSpellKnown) and "" or " (C_SpellBook.IsSpellKnown missing: assumed)"),
     ("events: %d hidden, %d plain Blizzard channel starts; channelling now: %s; Nova window: %s"):format(HW.hiddenEvents,
       HW.plainBlizzard, tostring(HW.channeling), HW.NovaUp() and (tostring(HW.novaSource) .. ", may still be up") or "closed"),
@@ -312,7 +311,7 @@ ev:SetScript("OnEvent", function(_, event, ...)
     KennyHoldTheWeatherDB = db
     settings = Core.Settings(db.settings, HW.DEFAULTS)
     row = FS.Register(KEY, db, { title = L["Hold the Weather"], slash = HW.Slash, help = "test | sound on|off | debug",
-      debug = Core.PrintDebug })
+      debug = Core.PrintDebug, refresh = refresh })
     HW.row = row
     Core.SafeCall("refresh", refresh)
     return

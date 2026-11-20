@@ -3,15 +3,23 @@
 -- the file to the TOC. Any string without a translation falls back to the English text.
 local _, ns = ...
 ns.Core.AddLocale("enUS", {
+  ["Blizzard"] = true,
   ["Box locked"] = true,
   ["Click to lock them."] = true,
   ["Click to unlock it."] = true,
   ["Drag the boxes to move them."] = true,
+  ["Frost Nova"] = true,
   ["HOLD THE WEATHER!"] = true,
+  ["Hide until I learn"] = true,
+  ["Hides this box on this character. It comes back by itself when you learn it."] = true,
   ["Hold the Weather"] = true,
   ["Hold the Weather is ready: it warns when your Blizzard would break your own Frost Nova. /frost weather test shows it."] = true,
+  ["Learn %s at level %d"] = true,
+  ["Learn %s from your trainer"] = true,
   ["Nova up"] = true,
   ["Some features are switched off. Type"] = true,
+  ["Take %s at level %d"] = true,
+  ["Take the %s talent"] = true,
   ["The client is hiding your casts here, so Hold the Weather can't warn you. /frost weather debug shows why."] = true,
   ["The preview only runs out of combat."] = true,
   ["WARNING: this client is missing APIs this addon needs:"] = true,
