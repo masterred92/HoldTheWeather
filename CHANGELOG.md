@@ -9,6 +9,6 @@ First release, part of the Frost Suite.
 - The Nova window comes from the Frost Nova root on your target when the game lets addons read it, otherwise from your own
   Frost Nova cast plus its 8-second duration from the game's data. Nova can break early from damage, so the box says
   "Nova up" (it may still be up), never a countdown.
-- If the game hides your casts, the box says `can't see your casts here` and chat says it once. It never warns on a guess.
+- If the game hides your casts, the box says `can't see your casts here` and chat says it once; if only your Frost Nova is hidden, it says `can't see your Frost Nova here`. It never warns on a guess.
 - `/frost weather test` shows the warning out of combat; `/frost weather sound on|off`; `/frost weather debug`.
 - Docks with the other Frost Suite boxes (one column, one padlock, one glow at a time; this warning has top priority).

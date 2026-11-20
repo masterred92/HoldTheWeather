@@ -101,7 +101,7 @@ function M.install(env)
   env.IsPlayerMoving = function() return M.moving == true end
   env.UnitExists = function(u) if u == "target" then return M.target ~= nil end return u == "player" end
   env.GameTooltip = frameObj("GameTooltip")
-  env.C_ClassTalents = { GetActiveConfigID = function() return M.trees and 101 or nil end }
+  env.C_ClassTalents = { GetActiveConfigID = function() return (M.trees or M.talents) and 101 or nil end }
   env.C_Traits = {
     GetConfigInfo = function() return { ID = 101, treeIDs = { 5 } } end,
     GetGroupDisplayInfoByTreeID = function()
@@ -111,8 +111,37 @@ function M.install(env)
     GetGroupCurrencyInfo = function()
       local out = {}
       for i, t in ipairs(M.trees or {}) do out[i] = { traitNodeGroupID = 900 + i, currencyInfos = { { spent = t[3] } } } end
-      return out end }
+      return out end,
+    -- talent nodes: M.talents[spellID] = { currentRank, maxRanks } (node ID = entry ID = definition ID = spellID)
+    GetTreeNodes = function() local out = {}; for id in pairs(M.talents or {}) do out[#out + 1] = id end; return out end,
+    GetNodeInfo = function(_, node) local t = M.talents and M.talents[node]
+      return { ID = node, entryIDs = { node }, currentRank = t and t[1] or 0, ranksPurchased = t and t[1] or 0, maxRanks = t and t[2] or 0 } end,
+    GetEntryInfo = function(_, entry) return { definitionID = entry, maxRanks = 1 } end,
+    GetDefinitionInfo = function(def) return { spellID = def } end }
   env.AbbreviateNumbers = function(n) return tostring(n) end
+  -- Bags: M.bags[bag][slot] = { itemID, count, bound }. M.items[itemID] = { name, sellPrice }.
+  env.NUM_BAG_SLOTS = 4
+  env.C_Container = {
+    GetContainerNumSlots = function(bag) return (M.bags and M.bags[bag]) and 16 or 0 end,
+    GetContainerItemInfo = function(bag, slot)
+      local it = M.bags and M.bags[bag] and M.bags[bag][slot]
+      if not it then return nil end
+      return { itemID = it[1], stackCount = it[2], isBound = it[3] == true, iconFileID = 0, quality = 1, isLocked = false,
+        isReadable = false, hasLoot = false, hyperlink = "item:" .. it[1], isFiltered = false, hasNoValue = false,
+        itemName = M.items and M.items[it[1]] and M.items[it[1]].name } end }
+  env.C_Item = {
+    GetItemInfo = function(id)
+      local i = M.items and M.items[id]
+      if not i then return nil end
+      return i.name, "item:" .. id, 1, 1, 1, "Consumable", "Food & Drink", 20, "", 0, i.sellPrice or 0, 0, 0 end }
+  env.ItemLocation = { CreateFromBagAndSlot = function(_, bag, slot) return { bag = bag, slot = slot } end }
+  -- Auction house: M.ahOpen; M.ahRefuse[itemID] = true when the AH won't take it; M.deposit = copper per listing.
+  env.C_AuctionHouse = {
+    IsSellItemValid = function(loc)
+      local it = M.bags and M.bags[loc.bag] and M.bags[loc.bag][loc.slot]
+      return it ~= nil and not (M.ahRefuse and M.ahRefuse[it[1]]) end,
+    CalculateCommodityDeposit = function(_, _, qty) if M.ahOpen and M.deposit then return M.deposit * (qty or 1) end end,
+    CalculateItemDeposit = function(_, _, qty) if M.ahOpen and M.deposit then return M.deposit * (qty or 1) end end }
   env.UIParent = frameObj("UIParent")
   env.SlashCmdList = env.SlashCmdList or {}
   env.CreateFrame = function(_, name, parent) local f = frameObj(name); f.parent = parent; M.frames[#M.frames + 1] = f

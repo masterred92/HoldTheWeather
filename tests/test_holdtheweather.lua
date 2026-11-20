@@ -89,6 +89,12 @@ check(dbg:find("Blizzard channel: none", 1, true) and dbg:find("procs and other 
 reset(); for id in pairs(HW.BLIZZARD) do S.castAlways[id] = true end
 W.fire("PLAYER_LOGIN")
 check(HW.modes.blizzard == "none" and not HW.CanWarn(), "always-secret Blizzard casts: none from login")
+check(FS.rows.HoldTheWeather.statusText == "can't see your casts here", "status names the hidden casts")
+-- Only the Nova window is missing (Nova casts always secret, Nova aura secret): the status says that, not "casts".
+reset(); for id in pairs(HW.NOVA) do S.castAlways[id] = true end
+W.fire("PLAYER_LOGIN")
+check(HW.modes.nova == "none" and HW.modes.blizzard == "cast", "Nova hidden, Blizzard visible")
+check(FS.rows.HoldTheWeather.statusText == "can't see your Frost Nova here", "status names the missing Nova window")
 
 -- 5. Not a Mage / spells not known: the row takes no slot.
 reset(); W.class = "WARRIOR"; W.fire("SPELLS_CHANGED")

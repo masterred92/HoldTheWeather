@@ -6,7 +6,7 @@
 -- upgrade keeps it. Each addon works alone: with one addon loaded the dock is a single row.
 -- Look and numbers come from UI Bot's VISUAL_SPEC.md (v1): FS.C, FS.FONT, FS.PALETTE and FS.ADDONS are the drop-in tables.
 local _, ns = ...
-local MAJOR, MINOR = "FrostSuite-1.0", 1
+local MAJOR, MINOR = "FrostSuite-1.0", 2
 local FS = _G.FrostSuite_1_0
 if type(FS) ~= "table" then FS = {}; _G.FrostSuite_1_0 = FS end
 ns.FrostSuite = FS
@@ -68,6 +68,86 @@ function FS.InCombat()
   end
   return UnitAffectingCombat ~= nil and UnitAffectingCombat("player") == true
 end
+
+-- ---------- shared detection helpers: never guess a secret value ----------
+-- An aura read is trusted only when the client says it is readable right now: restrictions off, the spell flagged
+-- never-secret (C_Secrets.GetSpellAuraSecrecy == 0), or C_Secrets.ShouldSpellAuraBeSecret(id) == false. Otherwise an empty
+-- answer could mean "hidden" as well as "not up", so it is not used.
+function FS.IsSecret(v) return issecretvalue ~= nil and v ~= nil and issecretvalue(v) == true end
+function FS.Call(fn, ...)
+  if type(fn) ~= "function" then return nil end
+  local ok, v = pcall(fn, ...)
+  if not ok or FS.IsSecret(v) then return nil end
+  return v
+end
+function FS.Restricted()
+  local S = C_Secrets
+  local v = S and FS.Call(S.HasSecretRestrictions)
+  if v == nil and type(S) ~= "table" and issecretvalue == nil then return false end
+  return v
+end
+function FS.AuraSecrecy(id) local S = C_Secrets; local v = S and FS.Call(S.GetSpellAuraSecrecy, id); return type(v) == "number" and v or nil end
+function FS.CastSecrecy(id) local S = C_Secrets; local v = S and FS.Call(S.GetSpellCastSecrecy, id); return type(v) == "number" and v or nil end
+local function canRead(unit)
+  local U = C_UnitAuras
+  if not U then return false end
+  if unit == "player" then return type(U.GetPlayerAuraBySpellID) == "function" or type(U.GetUnitAuraBySpellID) == "function" end
+  return type(U.GetUnitAuraBySpellID) == "function"
+end
+function FS.AuraNeverSecret(id) return FS.Restricted() == false or FS.AuraSecrecy(id) == 0 end
+function FS.AuraReadableNow(id, unit)
+  if not canRead(unit or "player") then return false end
+  if FS.AuraNeverSecret(id) then return true end
+  local S = C_Secrets
+  return S ~= nil and FS.Call(S.ShouldSpellAuraBeSecret, id) == false
+end
+-- Returns aura (table or nil), readable (true when the answer can be trusted).
+function FS.ReadAura(unit, id)
+  if not FS.AuraReadableNow(id, unit) then return nil, false end
+  local U = C_UnitAuras
+  local fn = (unit == "player" and U.GetPlayerAuraBySpellID) or U.GetUnitAuraBySpellID
+  local ok, a
+  if fn == U.GetPlayerAuraBySpellID then ok, a = pcall(fn, id) else ok, a = pcall(fn, unit, id) end
+  if not ok or FS.IsSecret(a) then return nil, false end
+  return type(a) == "table" and a or nil, true
+end
+function FS.AuraField(aura, key)
+  if type(aura) ~= "table" then return nil end
+  local ok, v = pcall(function() return aura[key] end)
+  if not ok or FS.IsSecret(v) or type(v) ~= "number" then return nil end
+  return v
+end
+-- Talent rank by the talent's spell ID, read from the active talent config. Returns rank, maxRanks, or nil when unknown.
+function FS.TalentRank(spellID)
+  local CT, T = C_ClassTalents, C_Traits
+  if not (CT and T and CT.GetActiveConfigID and T.GetConfigInfo and T.GetTreeNodes and T.GetNodeInfo and T.GetEntryInfo
+    and T.GetDefinitionInfo) then return nil end
+  local config = FS.Call(CT.GetActiveConfigID)
+  local info = config and FS.Call(T.GetConfigInfo, config)
+  if type(info) ~= "table" or type(info.treeIDs) ~= "table" then return nil end
+  for _, tree in ipairs(info.treeIDs) do
+    for _, node in ipairs(FS.Call(T.GetTreeNodes, tree) or {}) do
+      local n = FS.Call(T.GetNodeInfo, config, node)
+      for _, entry in ipairs(type(n) == "table" and n.entryIDs or {}) do
+        local e = FS.Call(T.GetEntryInfo, config, entry)
+        local d = e and e.definitionID and FS.Call(T.GetDefinitionInfo, e.definitionID)
+        if d and d.spellID == spellID then return n.currentRank or n.ranksPurchased or 0, n.maxRanks end
+      end
+    end
+  end
+  return nil
+end
+-- Any rank of a spell set known (C_SpellBook). nil when the client can't say.
+function FS.KnowsAny(set)
+  local SB = C_SpellBook
+  if not (SB and type(SB.IsSpellKnown) == "function") then return nil end
+  for id in pairs(set) do
+    local ok, v = pcall(SB.IsSpellKnown, id)
+    if ok and v == true then return true end
+  end
+  return false
+end
+function FS.IsMage() local _, class = UnitClass("player"); return class == "MAGE" end
 
 -- ---------- shared position, lock and scale (db.suite in every addon's own SavedVariables; newest stamp wins) ----------
 local function defaultSuite()
@@ -169,6 +249,7 @@ function FS.Bar(key, frac, color)
   local r = FS.rows[key]
   r.barValue = frac
   if not frac then r.bar:Hide(); return end
+  if r.full == false then return end
   local c = pcolor(color or FS.ADDONS[key].accent or "Snow")
   r.bar:SetStatusBarColor(c[1], c[2], c[3])
   r.bar:SetValue(math.max(0, math.min(1, frac)))
@@ -266,6 +347,12 @@ function FS.Layout()
     if FS.Visible(r) then
       r.h = FS.RowHeight(r)
       r:SetHeight(r.h)
+      -- a title strip shows only icon, title and status; headline, bar and lines need the taller row
+      local full = r.h > FS.C.STRIP_H
+      r.full = full
+      r.head:SetShown(full)
+      if not full then r.bar:Hide() elseif r.barValue then r.bar:Show() end
+      for _, l in ipairs(r.lines) do l:SetShown(full) end
       r:ClearAllPoints()
       if prev then r:SetPoint("TOPLEFT", prev, "BOTTOMLEFT", 0, -FS.C.GAP) else r:SetPoint("TOPLEFT", FS.Anchor(), "TOPLEFT", 0, 0) end
       r.after = prev and prev.key or "anchor"

@@ -18,6 +18,7 @@ ns.Core.AddLocale("enUS", {
   ["boxes locked"] = true,
   ["boxes moved back to the default spot"] = true,
   ["boxes unlocked: drag any box to move them all"] = true,
+  ["can't see your Frost Nova here"] = true,
   ["can't see your casts here"] = true,
   ["clear"] = true,
   ["client"] = true,

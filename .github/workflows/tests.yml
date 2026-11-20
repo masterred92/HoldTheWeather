@@ -1,5 +1,5 @@
 # Runs the offline checks on every push and pull request. Never packages or uploads anything.
-# The FrostSuite-1.0 drift check (tools/check_suite_lib.sh) runs locally, against the suite's canonical folder.
+# The FrostSuite-1.0 drift check against the canonical folder runs locally; CI checks the MINOR/hash rule only.
 name: Tests
 
 on:
@@ -39,5 +39,7 @@ jobs:
         run: sh tools/check_lib.sh index
       - name: Syntax, lint, locale, mock-client tests, Blizzard docs and API checks
         run: sh tests/run.sh wow-ui
-      - name: Unit events and mocked APIs exist in the Forever docs
+      - name: Unit events exist in the Forever docs
         run: python3 tools/verify_unit_events.py wow-ui
+      - name: FrostSuite-1.0 content matches its MINOR
+        run: sh tools/check_suite_lib.sh none

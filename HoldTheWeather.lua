@@ -216,8 +216,10 @@ function HW.Update()
   return warn
 end
 
+-- Names what is actually missing: your casts (Blizzard channel hidden) or only the Frost Nova window.
 function HW.StatusText()
-  if not HW.CanWarn() then return L["can't see your casts here"], "Mist" end
+  if HW.modes.blizzard == "none" then return L["can't see your casts here"], "Mist" end
+  if HW.modes.nova == "none" then return L["can't see your Frost Nova here"], "Mist" end
   if HW.NovaUp() then return L["Nova up"], "Snow" end
   return L["clear"], "Mist"
 end
@@ -230,7 +232,7 @@ function HW.Paint()
     FS.Headline(KEY, L["HOLD THE WEATHER!"], "StopPink")
     FS.State(KEY, "active")
   else
-    FS.Headline(KEY, HW.CanWarn() and "" or L["can't see your casts here"], "Mist")
+    FS.Headline(KEY, "", "Mist")
     FS.State(KEY, "idle")
   end
 end

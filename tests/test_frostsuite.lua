@@ -7,7 +7,8 @@ local name = toc:gsub("%.toc$", "")
 W.loadAddon(".", name)
 W.fire("PLAYER_LOGIN")
 local FS = _G.FrostSuite_1_0
-check(type(FS) == "table" and FS.minor == 1, "library installed as FrostSuite_1_0 r1")
+local MINOR = tonumber(io.open("Libs/FrostSuite/VERSION"):read("*l"))
+check(type(FS) == "table" and FS.minor == MINOR, "library installed as FrostSuite_1_0 at its MINOR")
 check(FS.rows[name] ~= nil, "the addon registered its own row")
 check(SLASH_FROSTSUITE1 == "/frost" and SlashCmdList.FROSTSUITE ~= nil, "/frost registered")
 
@@ -22,7 +23,7 @@ assert(loadfile("Libs/FrostSuite/FrostSuite.lua"))("Older", {})
 check(FS.Layout == oldLayout and FS.minor == 99, "older copy does not replace a newer one")
 FS.minor = 0
 assert(loadfile("Libs/FrostSuite/FrostSuite.lua"))("Newer", {})
-check(FS.minor == 1 and FS.rows[name] == before, "newer copy upgrades in place and keeps rows")
+check(FS.minor == MINOR and FS.rows[name] == before, "newer copy upgrades in place and keeps rows")
 
 -- Fake the other six rows so the dock and flash rule can be checked with the whole suite loaded.
 local dbs = {}
@@ -36,6 +37,7 @@ check(FS.order[1] == "HoldTheWeather" and FS.order[7] == "ScrollCall", "dock ord
 check(FS.rows.HoldTheWeather.after == "anchor" and FS.rows.EightSecondArgument.after == "HoldTheWeather", "rows chain top to bottom")
 check(FS.rows.HoldTheWeather.h == 28 and FS.rows.ShatterHappens.h == 96, "idle heights: strip 28, Shatter 96")
 check(FS.lock.owner == "HoldTheWeather", "padlock on the top row")
+check(FS.rows.HoldTheWeather.head.shown == false and FS.rows.ShatterHappens.head.shown == true, "strip hides the headline; taller idle rows keep it")
 -- A hidden row takes no slot; the next one moves up and takes the padlock.
 FS.rows.HoldTheWeather.state = "hidden"; FS.Layout()
 check(FS.rows.EightSecondArgument.after == "anchor" and FS.lock.owner == "EightSecondArgument", "hidden row leaves no gap")
@@ -113,5 +115,35 @@ SlashCmdList.FROSTSUITE("")
 check(W.printed("/frost " .. FS.ADDONS[name].cmd), "/frost lists the addon's subcommand")
 W.prints = {}
 SlashCmdList.FROSTSUITE("debug")
-check(W.printed("FrostSuite-1.0 r1"), "/frost debug prints the dock state")
+check(W.printed("FrostSuite-1.0 r" .. MINOR), "/frost debug prints the dock state")
+
+-- Detection helpers: an aura answer is trusted only when the client says it is readable.
+local S = W.S
+S.install(W)
+W.combat = false
+S.gain(400669, 2, 15)
+local a, ok = FS.ReadAura("player", 400669)
+check(ok and FS.AuraField(a, "applications") == 2, "out of combat: aura readable")
+W.combat = true
+a, ok = FS.ReadAura("player", 400669)
+check(a == nil and ok == false, "in combat: secret aura is 'not readable', not 'not up'")
+S.never[400669] = true
+a, ok = FS.ReadAura("player", 400669)
+check(ok and a ~= nil and FS.AuraNeverSecret(400669), "never-secret aura readable in combat")
+S.unitGain("target", 12579, 3, 15)
+a, ok = FS.ReadAura("target", 12579)
+check(not ok, "enemy aura secret in combat")
+S.restrictions = false
+a, ok = FS.ReadAura("target", 12579)
+check(ok and FS.AuraField(a, "applications") == 3, "no restrictions: enemy aura readable")
+W.combat = false
+check(FS.TalentRank(11180) == nil, "talent rank unknown without a talent config")
+W.talents = { [11180] = { 3, 5 } }
+local rk, mx = FS.TalentRank(11180)
+check(rk == 3 and mx == 5, "talent rank read from the active config")
+W.talents = nil
+W.known = { [10] = true }
+check(FS.KnowsAny({ [10] = true, [6141] = true }) == true and FS.KnowsAny({ [120] = true }) == false, "KnowsAny")
+W.known = nil
+check(FS.IsMage(), "IsMage")
 W.done(name .. " frostsuite")
